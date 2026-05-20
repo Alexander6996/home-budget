@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Цели накопления{% endblock %}
+
+{% block content %}
+<div class="container mt-4 fade-in">
+    <!-- Заголовок -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-bullseye me-2"></i>Цели накопления</h1>
+                <p class="mb-0">Планируйте и достигайте финансовых целей</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Добавление цели -->
+    <div class="card form-card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Добавить новую цель</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('add_goal') }}" method="post">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-tag me-1"></i>Название цели *
+                        </label>
+                        <input type="text" class="form-control" id="name" name="name" required
+                               placeholder="Например: Новая машина">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="target_amount" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1"></i>Целевая сумма *
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₽</span>
+                            <input type="number" class="form-control" id="target_amount" name="target_amount"
+                                   step="1000" min="1000" required placeholder="100000">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="deadline" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>Срок (опционально)
+                        </label>
+                        <input type="date" class="form-control" id="deadline" name="deadline"
+                               min="{{ get_moscow_time().strftime('%Y-%m-%d') }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-modern btn-modern-success w-100">
+                            <i class="fas fa-plus me-1"></i>Добавить
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Список целей -->
+    {% if goals %}
+    <div class="row">
+        {% for goal in goals %}
+        {% set current = goal.current_amount|float %}
+        {% set target = goal.target_amount|float %}
+        {% set percentage = (current / target * 100) if target > 0 else 0 %}
+        {% set remaining = target - current %}
+        {% set is_completed = percentage >= 100 %}
+
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 {% if is_completed %}border-success border-2{% endif %}">
+                <div class="card-header d-flex justify-content-between align-items-center
+                           {% if is_completed %}bg-success text-white{% endif %}">
+                    <div class="d-flex align-items-center">
+                        <h5 class="mb-0">{{ goal.name }}</h5>
+                        {% if is_completed %}
+                        <span class="badge bg-white text-success ms-2">
+                            <i class="fas fa-check me-1"></i>Выполнена
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="badge {% if is_completed %}bg-white text-success
+                                      {% elif percentage >= 70 %}bg-warning
+                                      {% elif percentage >= 30 %}bg-primary
+                                      {% else %}bg-secondary{% endif %}">
+                        {{ "%.0f"|format(percentage) }}%
+                    </span>
+                </div>
+                <div class="card-body">
+                    <!-- Прогресс-бар -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <small class="text-muted">Прогресс</small>
+                            <small class="text-muted">{{ "%.0f"|format(percentage) }}%</small>
+                        </div>
+                        <div class="progress progress-modern" style="height: 15px;">
+                            <div class="progress-bar
+                                {% if is_completed %}bg-success
+                                {% elif percentage >= 70 %}bg-warning
+                                {% elif percentage >= 30 %}bg-primary
+                                {% else %}bg-info{% endif %}"
+                                role="progressbar"
+                                style="width: {{ percentage }}%">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Статистика цели -->
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="text-muted small">Накоплено</div>
+                            <div class="fw-bold fs-5 text-success">{{ "%.2f"|format(current) }} ₽</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-muted small">Цель</div>
+                            <div class="fw-bold fs-5 text-primary">{{ "%.2f"|format(target) }} ₽</div>
+                        </div>
+                    </div>
+
+                    <!-- Дополнительная информация -->
+                    <div class="mb-3">
+                        {% if goal.deadline %}
+                        <div class="mb-2">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            <small class="text-muted">Срок:</small>
+                            <div class="fw-bold">{{ goal.deadline }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if remaining > 0 %}
+                        <div class="py-2 px-3 rounded" style="background-color: #d1ecf1; color: #0c5460;">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Осталось накопить: <strong>{{ "%.2f"|format(remaining) }} ₽</strong>
+                        </div>
+                        {% elif is_completed %}
+                        <div class="alert alert-success py-2">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Цель достигнута!</strong> Поздравляем!
+                            {% if goal.deadline and goal.deadline|string > get_moscow_time().strftime('%Y-%m-%d') %}
+                            <br><small>Досрочное выполнение!</small>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Управление целью -->
+                    {% if not is_completed %}
+                    <div class="row g-2">
+                        <div class="col-8">
+                            <form action="{{ url_for('deposit_to_goal') }}" method="post" class="d-flex">
+                                <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                                <div class="input-group">
+                                    <span class="input-group-text">₽</span>
+                                    <input type="number" class="form-control" name="amount"
+                                           step="100" min="100" placeholder="Сумма" required>
+                                    <button type="submit" class="btn btn-modern-primary">
+                                        Пополнить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="col-4">
+                            <form action="{{ url_for('delete_goal', goal_id=goal.id) }}" method="post"
+                                  onsubmit="return confirm('Вы уверены, что хотите удалить цель «{{ goal.name }}»?')">
+                                <button type="submit" class="btn btn-modern-danger w-100">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <form action="{{ url_for('update_goal_progress') }}" method="post">
+                                <input type="hidden" name="goal_id" value="{{ goal.id }}">
+                                <input type="hidden" name="target_amount" value="{{ target }}">
+                                <input type="hidden" name="action" value="reactivate">
+                                <button type="submit" class="btn btn-modern-warning w-100"
+                                        onclick="return confirm('Реактивировать цель «{{ goal.name }}»? Текущая сумма будет сброшена.')">
+                                    <i class="fas fa-redo me-1"></i>Реактивировать
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-6">
+                            <form action="{{ url_for('delete_goal', goal_id=goal.id) }}" method="post"
+                                  onsubmit="return confirm('Вы уверены, что хотите удалить цель «{{ goal.name }}»?')">
+                                <button type="submit" class="btn btn-modern-danger w-100">
+                                    <i class="fas fa-trash me-1"></i>Удалить
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-bullseye fa-3x text-muted mb-3"></i>
+            <h4 class="text-muted">Цели еще не добавлены</h4>
+            <p class="text-muted mb-4">Добавьте свою первую цель накопления!</p>
+            <button class="btn btn-modern btn-modern-primary" onclick="scrollToForm()">
+                <i class="fas fa-plus me-1"></i>Добавить первую цель
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function scrollToForm() {
+    document.querySelector('.form-card').scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+    });
+    document.getElementById('name').focus();
+}
+
+// Автоматический расчет рекомендуемой суммы
+document.addEventListener('DOMContentLoaded', function() {
+    const targetInput = document.getElementById('target_amount');
+    const autoSaveInput = document.getElementById('auto_save_amount');
+
+    if (targetInput) {
+        targetInput.addEventListener('input', function() {
+            const target = parseFloat(this.value) || 0;
+            if (target > 0) {
+                // Предлагаем 10% от цели как автосбережение
+                const suggestedAutoSave = Math.round(target * 0.1 / 100) * 100;
+                if (suggestedAutoSave >= 100) {
+                    autoSaveInput.placeholder = suggestedAutoSave + ' (рекомендуется)';
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика по дням - Домашний бюджет{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-calendar-day me-2"></i>Статистика по дням
+    </h1>
+    <div>
+        <a href="{{ url_for('statistics_year', year=year) }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i>Назад к {{ year }} году
+        </a>
+        <a href="{{ url_for('statistics') }}" class="btn btn-outline-primary">
+            <i class="fas fa-chart-bar me-1"></i>Вся статистика
+        </a>
+    </div>
+</div>
+
+<div class="alert alert-info">
+    <h4 class="alert-heading">{{ month_name }} {{ year }}</h4>
+    Просмотр ежедневной статистики доходов и расходов
+</div>
+
+{% if daily_stats %}
+    <div class="row">
+        {% for day in daily_stats %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 {% if day.balance > 0 %}border-success{% elif day.balance < 0 %}border-danger{% else %}border-secondary{% endif %}">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="fas fa-calendar me-2"></i>{{ day.day_num }} {{ month_name }}
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Доходы:</small>
+                                <div class="text-success fw-bold">{{ "%.2f"|format(day.income) }} ₽</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Расходы:</small>
+                                <div class="text-danger fw-bold">{{ "%.2f"|format(day.expense) }} ₽</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 pt-2 border-top">
+                            <small class="text-muted">Баланс за день:</small>
+                            <div class="{% if day.balance > 0 %}text-success{% elif day.balance < 0 %}text-danger{% else %}text-muted{% endif %} fw-bold">
+                                {{ "%.2f"|format(day.balance) }} ₽
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Итоги за месяц -->
+    {% set total_income = daily_stats | sum(attribute='income') %}
+    {% set total_expense = daily_stats | sum(attribute='expense') %}
+    {% set total_balance = total_income - total_expense %}
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card {% if total_balance > 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body">
+                    <h4 class="card-title text-center">Итоги за {{ month_name }} {{ year }}</h4>
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <h5 class="text-success">{{ "%.2f"|format(total_income) }} ₽</h5>
+                            <small class="text-muted">Общие доходы</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="text-danger">{{ "%.2f"|format(total_expense) }} ₽</h5>
+                            <small class="text-muted">Общие расходы</small>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="{% if total_balance > 0 %}text-success{% else %}text-danger{% endif %}">
+                                {{ "%.2f"|format(total_balance) }} ₽
+                            </h5>
+                            <small class="text-muted">Общий баланс</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Нет данных за {{ month_name }} {{ year }} года.
+    </div>
+{% endif %}
+{% endblock %}

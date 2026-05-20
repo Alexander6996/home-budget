@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Статистика за {{ year }} год - Домашний бюджет{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="fas fa-chart-bar me-2"></i>Статистика за {{ year }} год
+    </h1>
+    <div>
+        <a href="{{ url_for('statistics') }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-arrow-left me-1"></i>Назад к статистике
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+            <i class="fas fa-home me-1"></i>На главную
+        </a>
+    </div>
+</div>
+
+<!-- Итоги за год -->
+{% if monthly_stats %}
+    {% set total_income = monthly_stats | sum(attribute='income') %}
+    {% set total_expense = monthly_stats | sum(attribute='expense') %}
+    {% set total_balance = total_income - total_expense %}
+    
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h5 class="text-success">
+                        <i class="fas fa-arrow-down me-2"></i>Доходы
+                    </h5>
+                    <h3 class="text-success">{{ "%.2f"|format(total_income) }} ₽</h3>
+                    <small class="text-muted">За {{ year }} год</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-danger">
+                <div class="card-body text-center">
+                    <h5 class="text-danger">
+                        <i class="fas fa-arrow-up me-2"></i>Расходы
+                    </h5>
+                    <h3 class="text-danger">{{ "%.2f"|format(total_expense) }} ₽</h3>
+                    <small class="text-muted">За {{ year }} год</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card {% if total_balance > 0 %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-body text-center">
+                    <h5 class="{% if total_balance > 0 %}text-success{% else %}text-danger{% endif %}">
+                        Баланс
+                    </h5>
+                    <h3 class="{% if total_balance > 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ "%.2f"|format(total_balance) }} ₽
+                    </h3>
+                    <small class="text-muted">За {{ year }} год</small>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Статистика по месяцам -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-calendar-alt me-2"></i>Статистика по месяцам
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if monthly_stats %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Месяц</th>
+                            <th>Доходы</th>
+                            <th>Расходы</th>
+                            <th>Баланс</th>
+                            <th>Детали</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for month in monthly_stats %}
+                            <tr>
+                                <td>
+                                    {% set month_names = {
+                                        '01': 'Январь', '02': 'Февраль', '03': 'Март',
+                                        '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+                                        '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+                                        '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+                                    } %}
+                                    {{ month_names[month.month_num] }}
+                                </td>
+                                <td class="text-success">{{ "%.2f"|format(month.income) }} ₽</td>
+                                <td class="text-danger">{{ "%.2f"|format(month.expense) }} ₽</td>
+                                <td class="{% if month.balance >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ "%.2f"|format(month.balance) }} ₽
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('statistics_daily', year=year, month=month.month_num) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-calendar-day me-1"></i>По дням
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>Нет данных за {{ year }} год.
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Детали по месяцам в карточках -->
+{% if monthly_stats %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <h4 class="mb-3">
+                <i class="fas fa-chart-pie me-2"></i>Детальная статистика по месяцам
+            </h4>
+        </div>
+        {% for month in monthly_stats %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 {% if month.balance > 0 %}border-success{% else %}border-danger{% endif %}">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            {% set month_names = {
+                                '01': 'Январь', '02': 'Февраль', '03': 'Март',
+                                '04': 'Апрель', '05': 'Май', '06': 'Июнь',
+                                '07': 'Июль', '08': 'Август', '09': 'Сентябрь',
+                                '10': 'Октябрь', '11': 'Ноябрь', '12': 'Декабрь'
+                            } %}
+                            {{ month_names[month.month_num] }} {{ year }}
+                        </h5>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Доходы:</small>
+                            <div class="text-success fw-bold">{{ "%.2f"|format(month.income) }} ₽</div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Расходы:</small>
+                            <div class="text-danger fw-bold">{{ "%.2f"|format(month.expense) }} ₽</div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <small class="text-muted">Баланс:</small>
+                            <div class="{% if month.balance > 0 %}text-success{% else %}text-danger{% endif %} fw-bold">
+                                {{ "%.2f"|format(month.balance) }} ₽
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <a href="{{ url_for('statistics_daily', year=year, month=month.month_num) }}" 
+                               class="btn btn-sm btn-outline-primary w-100">
+                                <i class="fas fa-calendar-day me-1"></i>Смотреть по дням
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+{% endblock %}

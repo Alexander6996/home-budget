@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center" style="min-height: 60vh;">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-header text-center" style="background: linear-gradient(135deg, #2c3e50, #34495e);">
+                <h4 class="mb-0 text-white">
+                    <i class="fas fa-user-plus me-2"></i>Регистрация
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" autocomplete="off">
+                    <div class="mb-3">
+                        <label class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-control form-control-lg"
+                               name="username" placeholder="Имя пользователя" required
+                               id="register-username"
+                               autocomplete="new-username">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Email (опционально)</label>
+                        <input type="email" class="form-control form-control-lg"
+                               name="email" placeholder="email@example.com"
+                               id="register-email"
+                               autocomplete="new-email">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Пароль</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control form-control-lg"
+                                   id="register-password" name="password" placeholder="Пароль" required
+                                   autocomplete="new-password">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('register-password', this)">👁</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Подтвердите пароль</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control form-control-lg"
+                                   id="register-confirm-password" name="confirm_password" placeholder="Подтвердите пароль" required
+                                   autocomplete="new-password">
+                            <button type="button" class="btn btn-outline-secondary" onclick="togglePassword('register-confirm-password', this)">👁</button>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-success btn-lg w-100 mb-3">Зарегистрироваться</button>
+                    <div class="text-center">
+                        <p class="mb-0">Уже есть аккаунт?
+                            <a href="{{ url_for('login') }}" class="text-decoration-none">
+                                <strong>Войти</strong>
+                            </a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(id, btn) {
+    const input = document.getElementById(id);
+    if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈";
+    } else {
+        input.type = "password";
+        btn.textContent = "👁";
+    }
+}
+
+// Очистка полей при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Очищаем все поля
+    document.getElementById('register-username').value = '';
+    document.getElementById('register-email').value = '';
+    document.getElementById('register-password').value = '';
+    document.getElementById('register-confirm-password').value = '';
+
+    // Фокус на поле username
+    document.getElementById('register-username').focus();
+});
+</script>
+{% endblock %}

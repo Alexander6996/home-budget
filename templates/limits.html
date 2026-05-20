@@ -1,0 +1,613 @@
+{% extends "base.html" %}
+
+{% block title %}Лимиты расходов{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="fas fa-tachometer-alt me-2"></i>Лимиты расходов</h1>
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-cog me-1"></i>Настройки
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#helpModal">
+                    <i class="fas fa-question-circle me-2"></i>Справка
+                </a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="#" onclick="resetAllLimits()">
+                    <i class="fas fa-redo me-2"></i>Сбросить все лимиты
+                </a></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Статистика лимитов -->
+    {% set total_limits = categories|selectattr('amount_limit')|list|length %}
+    {% set active_warnings = categories|selectattr('amount_limit')|selectattr('current_spent')|map(attribute='current_spent')|sum %}
+    {% set total_limit_amount = categories|selectattr('amount_limit')|map(attribute='amount_limit')|sum %}
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center">
+                    <h5 class="text-primary">Установлено лимитов</h5>
+                    <h2 class="text-primary">{{ total_limits }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center">
+                    <h5 class="text-success">Общий лимит</h5>
+                    <h2 class="text-success">{{ "%.0f"|format(total_limit_amount) }} ₽</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center">
+                    <h5 class="text-warning">Потрачено</h5>
+                    <h2 class="text-warning">{{ "%.0f"|format(active_warnings) }} ₽</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center">
+                    <h5 class="text-info">Остаток</h5>
+                    <h2 class="text-info">{{ "%.0f"|format(total_limit_amount - active_warnings) }} ₽</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма установки лимита -->
+    <div class="card mb-4" id="set-limit-form">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Установить новый лимит</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('set_limit') }}" method="post" id="limitForm">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="category_id" class="form-label">
+                            <i class="fas fa-tag me-1"></i>Категория *
+                        </label>
+                        <select class="form-select" id="category_id" name="category_id" required
+                                onchange="updateCategoryInfo()">
+                            <option value="">-- Выберите категорию --</option>
+                            {% for category in categories %}
+                                {% if category.type == 'expense' %}
+                                    <option value="{{ category.id }}"
+                                            data-icon="{{ category.icon }}"
+                                            data-color="{{ category.color }}"
+                                            data-current="{{ category.current_spent }}">
+                                        {{ category.icon }} {{ category.name }}
+                                        {% if category.amount_limit %}
+                                            <span class="text-muted">(лимит: {{ "%.2f"|format(category.amount_limit) }} ₽)</span>
+                                        {% endif %}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <div class="mt-2" id="categoryInfo" style="display: none;">
+                            <small>
+                                <span id="categoryIcon"></span>
+                                <span id="categoryName"></span>
+                                <br>
+                                Уже потрачено: <span id="currentSpent" class="fw-bold">0</span> ₽
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="amount_limit" class="form-label">
+                            <i class="fas fa-money-bill-wave me-1"></i>Лимит (₽) *
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₽</span>
+                            <input type="number" class="form-control" id="amount_limit"
+                                   name="amount_limit" step="0.01" min="0" required
+                                   placeholder="1000.00">
+                        </div>
+                        <div class="form-text">Минимум: 100 ₽</div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="period" class="form-label">
+                            <i class="fas fa-calendar-alt me-1"></i>Период *
+                        </label>
+                        <select class="form-select" id="period" name="period" required>
+                            <option value="monthly">📅 Ежемесячно</option>
+                            <option value="weekly">📆 Еженедельно</option>
+                            <option value="daily">☀️ Ежедневно</option>
+                        </select>
+                        <div class="form-text" id="periodInfo">Сброс в начале месяца</div>
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                            <i class="fas fa-save me-1"></i>Установить
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Рекомендации -->
+                <div class="mt-3 p-3 bg-light rounded" id="recommendations" style="display: none;">
+                    <h6><i class="fas fa-lightbulb me-2 text-warning"></i>Рекомендации:</h6>
+                    <div id="recommendationContent"></div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Текущие лимиты -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Текущие лимиты</h5>
+            <span class="badge bg-primary">{{ categories|length }} категорий</span>
+        </div>
+        <div class="card-body">
+            {% if categories %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="20%"><i class="fas fa-tag me-1"></i>Категория</th>
+                                <th width="15%"><i class="fas fa-limit me-1"></i>Лимит</th>
+                                <th width="15%"><i class="fas fa-money-bill-wave me-1"></i>Потрачено</th>
+                                <th width="15%"><i class="fas fa-wallet me-1"></i>Остаток</th>
+                                <th width="10%"><i class="fas fa-calendar me-1"></i>Период</th>
+                                <th width="15%"><i class="fas fa-chart-line me-1"></i>Прогресс</th>
+                                <th width="10%"><i class="fas fa-cog me-1"></i>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                                {% if category.amount_limit %}
+                                    {% set usage_percent = (category.current_spent / category.amount_limit * 100) if category.amount_limit > 0 else 0 %}
+                                    {% set remaining = category.amount_limit - category.current_spent %}
+
+                                    <tr class="{% if usage_percent >= 90 %}table-danger
+                                              {% elif usage_percent >= 70 %}table-warning
+                                              {% elif usage_percent >= 50 %}table-info{% endif %}">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="{{ category.icon }} fa-2x" style="color: {{ category.color }}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ category.name }}</div>
+                                                    <small class="text-muted">{{ category.type == 'expense' and 'Расход' or 'Доход' }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <div class="fw-bold text-primary">{{ "%.2f"|format(category.amount_limit) }} ₽</div>
+                                            <small class="text-muted" id="limitPeriod{{ category.id }}">
+                                                {% if category.period == 'monthly' %}в месяц
+                                                {% elif category.period == 'weekly' %}в неделю
+                                                {% else %}в день{% endif %}
+                                            </small>
+                                        </td>
+
+                                        <td>
+                                            <div class="fw-bold {% if category.current_spent > 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {{ "%.2f"|format(category.current_spent) }} ₽
+                                            </div>
+                                            <small class="text-muted">{{ "%.1f"|format(usage_percent) }}% от лимита</small>
+                                        </td>
+
+                                        <td>
+                                            <div class="fw-bold {% if remaining >= 0 %}text-success{% else %}text-danger{% endif %}">
+                                                {{ "%.2f"|format(remaining) }} ₽
+                                            </div>
+                                            {% if remaining < 0 %}
+                                                <small class="text-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> Превышено на {{ "%.2f"|format(-remaining) }} ₽
+                                                </small>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            <span class="badge
+                                                {% if category.period == 'monthly' %}bg-primary
+                                                {% elif category.period == 'weekly' %}bg-info
+                                                {% else %}bg-secondary{% endif %}">
+                                                {% if category.period == 'monthly' %}Месяц
+                                                {% elif category.period == 'weekly' %}Неделя
+                                                {% else %}День{% endif %}
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <!-- Прогресс-бар -->
+                                                <div class="progress mb-2" style="height: 12px;">
+                                                    <div class="progress-bar
+                                                        {% if usage_percent < 50 %}bg-success
+                                                        {% elif usage_percent < 70 %}bg-info
+                                                        {% elif usage_percent < 90 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}"
+                                                        style="width: {{ usage_percent }}%"
+                                                        role="progressbar"
+                                                        aria-valuenow="{{ usage_percent }}"
+                                                        aria-valuemin="0"
+                                                        aria-valuemax="100">
+                                                    </div>
+                                                </div>
+
+                                                <!-- Статус -->
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <span class="badge
+                                                        {% if usage_percent < 50 %}bg-success
+                                                        {% elif usage_percent < 70 %}bg-info
+                                                        {% elif usage_percent < 90 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}">
+                                                        {% if usage_percent < 30 %}Низкий расход
+                                                        {% elif usage_percent < 50 %}В норме
+                                                        {% elif usage_percent < 70 %}Средний
+                                                        {% elif usage_percent < 90 %}Высокий
+                                                        {% else %}Критично{% endif %}
+                                                    </span>
+                                                    <small class="text-muted">{{ "%.0f"|format(usage_percent) }}%</small>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary"
+                                                        onclick="editLimit({{ category.id }}, {{ category.amount_limit }}, '{{ category.period }}')"
+                                                        title="Редактировать">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+
+                                                <form action="{{ url_for('delete_limit', limit_id=category.limit_id) }}" method="post"
+                                                      onsubmit="return confirm('Удалить лимит для «{{ category.name }}»?')"
+                                                      class="d-inline">
+                                                    <button type="submit" class="btn btn-outline-danger"
+                                                            title="Удалить лимит">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+
+                                                {% if usage_percent >= 70 %}
+                                                <button type="button" class="btn btn-outline-warning"
+                                                        onclick="showWarning('{{ category.name }}', {{ usage_percent }})"
+                                                        title="Предупреждение">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <i class="{{ category.icon }} fa-2x" style="color: {{ category.color }}"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ category.name }}</div>
+                                                    <small class="text-muted">Без лимита</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td colspan="5" class="text-center text-muted">
+                                            Лимит не установлен
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-success"
+                                                    onclick="quickSetLimit({{ category.id }}, '{{ category.name }}')">
+                                                <i class="fas fa-plus me-1"></i>Добавить
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Легенда статусов -->
+                <div class="mt-4">
+                    <h6><i class="fas fa-info-circle me-2"></i>Легенда статусов:</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-success"><i class="fas fa-check"></i> В норме (0-50%)</span>
+                        <span class="badge bg-info"><i class="fas fa-info"></i> Средний (50-70%)</span>
+                        <span class="badge bg-warning"><i class="fas fa-exclamation"></i> Высокий (70-90%)</span>
+                        <span class="badge bg-danger"><i class="fas fa-exclamation-triangle"></i> Критичный (90-100%+)</span>
+                    </div>
+                </div>
+
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Нет категорий расходов</h5>
+                    <p class="text-muted mb-4">Добавьте категории расходов, чтобы установить лимиты</p>
+                    <a href="{{ url_for('add_transaction') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i>Добавить операцию
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования -->
+<div class="modal fade" id="editLimitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Редактировать лимит</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editLimitForm" method="post">
+                <div class="modal-body">
+                    <input type="hidden" id="editCategoryId" name="category_id">
+                    <div class="mb-3">
+                        <label for="editAmountLimit" class="form-label">Новый лимит (₽)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₽</span>
+                            <input type="number" class="form-control" id="editAmountLimit"
+                                   name="amount_limit" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPeriod" class="form-label">Период</label>
+                        <select class="form-select" id="editPeriod" name="period" required>
+                            <option value="monthly">Ежемесячно</option>
+                            <option value="weekly">Еженедельно</option>
+                            <option value="daily">Ежедневно</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Изменения вступят в силу с начала следующего периода
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно справки -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-question-circle me-2"></i>Справка по лимитам</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-lightbulb text-warning me-2"></i>Как это работает:</h6>
+                        <ul>
+                            <li>Устанавливайте лимиты для контроля расходов</li>
+                            <li>Выбирайте период: день, неделя или месяц</li>
+                            <li>Система автоматически отслеживает ваши траты</li>
+                            <li>Получайте уведомления при приближении к лимиту</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-chart-pie text-primary me-2"></i>Статусы:</h6>
+                        <ul>
+                            <li><span class="badge bg-success">В норме</span> - менее 50% лимита</li>
+                            <li><span class="badge bg-info">Средний</span> - 50-70% лимита</li>
+                            <li><span class="badge bg-warning">Высокий</span> - 70-90% лимита</li>
+                            <li><span class="badge bg-danger">Критичный</span> - более 90% лимита</li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <h6><i class="fas fa-tips text-success me-2"></i>Советы:</h6>
+                <div class="alert alert-success">
+                    <i class="fas fa-star me-2"></i>
+                    <strong>Рекомендуемые лимиты:</strong><br>
+                    • Продукты: 30% от дохода<br>
+                    • Развлечения: 10% от дохода<br>
+                    • Транспорт: 15% от дохода<br>
+                    • Коммунальные услуги: фиксированная сумма
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Обновление информации о категории при выборе
+function updateCategoryInfo() {
+    const select = document.getElementById('category_id');
+    const selectedOption = select.options[select.selectedIndex];
+    const infoDiv = document.getElementById('categoryInfo');
+
+    if (selectedOption.value) {
+        const icon = selectedOption.getAttribute('data-icon');
+        const name = selectedOption.text.split('(')[0].trim();
+        const current = selectedOption.getAttribute('data-current') || '0';
+
+        document.getElementById('categoryIcon').textContent = icon;
+        document.getElementById('categoryName').textContent = name;
+        document.getElementById('currentSpent').textContent = parseFloat(current).toFixed(2);
+
+        infoDiv.style.display = 'block';
+
+        // Показать рекомендации
+        showRecommendations(parseFloat(current));
+    } else {
+        infoDiv.style.display = 'none';
+        document.getElementById('recommendations').style.display = 'none';
+    }
+}
+
+// Показать рекомендации по лимиту
+function showRecommendations(currentSpent) {
+    const recDiv = document.getElementById('recommendations');
+    const recContent = document.getElementById('recommendationContent');
+
+    if (currentSpent > 0) {
+        const recommended = Math.max(currentSpent * 1.2, 1000); // +20% от текущих трат
+        recContent.innerHTML = `
+            <p>На основе ваших текущих трат (${currentSpent.toFixed(2)} ₽):</p>
+            <ul>
+                <li><strong>Минимальный рекомендуемый лимит:</strong> ${(currentSpent * 1.1).toFixed(0)} ₽ (+10%)</li>
+                <li><strong>Оптимальный лимит:</strong> ${(currentSpent * 1.3).toFixed(0)} ₽ (+30%)</li>
+                <li><strong>Комфортный лимит:</strong> ${(currentSpent * 1.5).toFixed(0)} ₽ (+50%)</li>
+            </ul>
+        `;
+        recDiv.style.display = 'block';
+
+        // Автоматически заполнить поле лимита
+        document.getElementById('amount_limit').value = recommended.toFixed(2);
+    } else {
+        recDiv.style.display = 'none';
+    }
+}
+
+// Редактирование лимита
+function editLimit(categoryId, currentLimit, currentPeriod) {
+    document.getElementById('editCategoryId').value = categoryId;
+    document.getElementById('editAmountLimit').value = currentLimit;
+    document.getElementById('editPeriod').value = currentPeriod;
+
+    // Обновить форму редактирования
+    const form = document.getElementById('editLimitForm');
+    form.action = "/update_limit";
+    // Показать модальное окно
+    const modal = new bootstrap.Modal(document.getElementById('editLimitModal'));
+    modal.show();
+}
+
+// Быстрая установка лимита
+function quickSetLimit(categoryId, categoryName) {
+    const amount = prompt(`Установите лимит для "${categoryName}" (₽):`, "1000");
+    if (amount && !isNaN(amount) && amount > 0) {
+        // Отправить запрос на установку лимита
+        fetch("{{ url_for('set_limit') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `category_id=${categoryId}&amount_limit=${amount}&period=monthly`
+        })
+        .then(response => {
+            if (response.redirected) {
+                window.location.href = response.url;
+            }
+        });
+    }
+}
+
+// Показать предупреждение
+function showWarning(categoryName, usagePercent) {
+    alert(`⚠️ Внимание!\n\nКатегория: ${categoryName}\nИспользовано: ${usagePercent.toFixed(1)}% лимита\n\nРекомендуется сократить расходы в этой категории.`);
+}
+
+// Обновление информации о периоде
+document.getElementById('period').addEventListener('change', function() {
+    const periodInfo = document.getElementById('periodInfo');
+    switch(this.value) {
+        case 'monthly':
+            periodInfo.textContent = 'Сброс в начале месяца';
+            break;
+        case 'weekly':
+            periodInfo.textContent = 'Сброс каждый понедельник';
+            break;
+        case 'daily':
+            periodInfo.textContent = 'Сброс каждый день';
+            break;
+    }
+});
+
+// Сброс всех лимитов
+function resetAllLimits() {
+    if (confirm('Вы уверены, что хотите сбросить ВСЕ лимиты? Это действие нельзя отменить.')) {
+        // Здесь можно добавить запрос на сброс лимитов
+        alert('Функция сброса всех лимитов будет реализована в следующей версии.');
+    }
+}
+
+// Валидация формы
+document.getElementById('limitForm').addEventListener('submit', function(e) {
+    const amount = document.getElementById('amount_limit').value;
+    if (amount < 100) {
+        e.preventDefault();
+        alert('Минимальный лимит - 100 ₽');
+        return false;
+    }
+
+    const categoryId = document.getElementById('category_id').value;
+    if (!categoryId) {
+        e.preventDefault();
+        alert('Выберите категорию');
+        return false;
+    }
+});
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', function() {
+    // Активировать тултипы
+    const tooltips = document.querySelectorAll('[title]');
+    tooltips.forEach(el => {
+        new bootstrap.Tooltip(el);
+    });
+
+    // Проверить наличие переполненных лимитов
+    {% for category in categories %}
+        {% if category.amount_limit %}
+            {% set usage_percent = (category.current_spent / category.amount_limit * 100) if category.amount_limit > 0 else 0 %}
+            {% if usage_percent >= 100 %}
+                setTimeout(() => {
+                    showWarning('{{ category.name }}', {{ usage_percent }});
+                }, 1000);
+            {% endif %}
+        {% endif %}
+    {% endfor %}
+});
+</script>
+
+<style>
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.5s ease;
+}
+
+.table-hover tbody tr:hover {
+    transform: translateY(-2px);
+    transition: transform 0.2s;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.badge {
+    font-weight: 500;
+    padding: 0.35em 0.65em;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.table th {
+    border-top: none;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table td {
+    vertical-align: middle;
+}
+</style>
+{% endblock %}

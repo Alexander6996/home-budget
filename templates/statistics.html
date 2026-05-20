@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Заголовок -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-chart-bar me-2"></i>Статистика</h1>
+                <p class="mb-0">Детальный анализ ваших финансов {{ period_title }}</p>
+            </div>
+            <div class="text-end">
+                <h3 class="mb-0">{{ "%.2f"|format(total_income - total_expense) }} ₽</h3>
+                <small>Баланс {{ period_title }}</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтр периода -->
+    <div class="card form-card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Выбор периода</h5>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('statistics') }}" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label for="period" class="form-label">Период</label>
+                    <select class="form-select" id="period" name="period" onchange="toggleCustomDates()">
+                        <option value="month" {% if period == 'month' %}selected{% endif %}>Текущий месяц</option>
+                        <option value="year" {% if period == 'year' %}selected{% endif %}>Текущий год</option>
+                        <option value="all" {% if period == 'all' %}selected{% endif %}>Все время</option>
+                        <option value="custom" {% if period == 'custom' %}selected{% endif %}>Произвольный диапазон</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3" id="startDateBlock" {% if period != 'custom' %}style="display: none;"{% endif %}>
+                    <label for="start_date" class="form-label">Дата с</label>
+                    <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date or '' }}">
+                </div>
+
+                <div class="col-md-3" id="endDateBlock" {% if period != 'custom' %}style="display: none;"{% endif %}>
+                    <label for="end_date" class="form-label">Дата по</label>
+                    <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date or '' }}">
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-modern btn-modern-primary w-100">
+                        <i class="fas fa-filter me-1"></i>Показать
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Быстрая статистика -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card stat-card-success">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-arrow-down me-2"></i>Доходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(total_income) }} ₽</h2>
+                    <p class="mb-0">{{ period_title }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card stat-card-danger">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-arrow-up me-2"></i>Расходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(total_expense) }} ₽</h2>
+                    <p class="mb-0">{{ period_title }}</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="stat-card stat-card-primary">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-balance-scale me-2"></i>Баланс</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(total_income - total_expense) }} ₽</h2>
+                    <p class="mb-0">{{ period_title }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Статистика по категориям -->
+    <div class="row mb-4">
+        <!-- Доходы -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-arrow-down text-success me-2"></i>Доходы по категориям</h5>
+                    <span class="badge bg-success">{{ income_by_category|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if income_by_category %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Категория</th>
+                                    <th>Сумма</th>
+                                    <th>%</th>
+                                    <th>Доля</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in income_by_category %}
+                                {% set percentage = (cat.total / total_income * 100) if total_income > 0 else 0 %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge me-2" style="background-color: {{ cat.color }};">&nbsp;&nbsp;&nbsp;</span>
+                                            {{ cat.name }}
+                                        </div>
+                                    </td>
+                                    <td class="text-success fw-bold">{{ "%.2f"|format(cat.total) }} ₽</td>
+                                    <td class="fw-bold">{{ "%.1f"|format(percentage) }}%</td>
+                                    <td>
+                                        <div class="progress progress-modern">
+                                            <div class="progress-bar bg-success" role="progressbar" style="width: {{ percentage }}%;"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Нет данных о доходах</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Расходы -->
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-arrow-up text-danger me-2"></i>Расходы по категориям</h5>
+                    <span class="badge bg-danger">{{ expense_by_category|length }}</span>
+                </div>
+                <div class="card-body">
+                    {% if expense_by_category %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Категория</th>
+                                    <th>Сумма</th>
+                                    <th>%</th>
+                                    <th>Доля</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cat in expense_by_category %}
+                                {% set percentage = (cat.total / total_expense * 100) if total_expense > 0 else 0 %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge me-2" style="background-color: {{ cat.color }};">&nbsp;&nbsp;&nbsp;</span>
+                                            {{ cat.name }}
+                                        </div>
+                                    </td>
+                                    <td class="text-danger fw-bold">{{ "%.2f"|format(cat.total) }} ₽</td>
+                                    <td class="fw-bold">{{ "%.1f"|format(percentage) }}%</td>
+                                    <td>
+                                        <div class="progress progress-modern">
+                                            <div class="progress-bar bg-danger" role="progressbar" style="width: {{ percentage }}%;"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Нет данных о расходах</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Круговые диаграммы -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Распределение доходов</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if income_by_category %}
+                    <div class="mb-3">
+                        <canvas id="incomeChart" width="400" height="400"></canvas>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Нет данных для диаграммы</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Распределение расходов</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if expense_by_category %}
+                    <div class="mb-3">
+                        <canvas id="expenseChart" width="400" height="400"></canvas>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">Нет данных для диаграммы</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- График баланса -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Динамика баланса</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if balance_labels and balance_values %}
+                    <div class="mb-3">
+                        <canvas id="balanceChart" height="100"></canvas>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Недостаточно данных для построения графика баланса</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+function toggleCustomDates() {
+    const period = document.getElementById('period').value;
+    const startDateBlock = document.getElementById('startDateBlock');
+    const endDateBlock = document.getElementById('endDateBlock');
+
+    if (period === 'custom') {
+        startDateBlock.style.display = 'block';
+        endDateBlock.style.display = 'block';
+    } else {
+        startDateBlock.style.display = 'none';
+        endDateBlock.style.display = 'none';
+    }
+}
+
+{% if income_by_category %}
+// Диаграмма доходов
+const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+new Chart(incomeCtx, {
+    type: 'pie',
+    data: {
+        labels: [
+            {% for cat in income_by_category %}
+            '{{ cat.name }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for cat in income_by_category %}
+                {{ cat.total }},
+                {% endfor %}
+            ],
+            backgroundColor: [
+                {% for cat in income_by_category %}
+                '{{ cat.color }}',
+                {% endfor %}
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Доходы по категориям'
+            }
+        }
+    }
+});
+{% endif %}
+
+{% if expense_by_category %}
+// Диаграмма расходов
+const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+new Chart(expenseCtx, {
+    type: 'pie',
+    data: {
+        labels: [
+            {% for cat in expense_by_category %}
+            '{{ cat.name }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            data: [
+                {% for cat in expense_by_category %}
+                {{ cat.total }},
+                {% endfor %}
+            ],
+            backgroundColor: [
+                {% for cat in expense_by_category %}
+                '{{ cat.color }}',
+                {% endfor %}
+            ],
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: 'Расходы по категориям'
+            }
+        }
+    }
+});
+{% endif %}
+
+{% if balance_labels and balance_values %}
+// График баланса
+const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+new Chart(balanceCtx, {
+    type: 'line',
+    data: {
+        labels: [
+            {% for label in balance_labels %}
+            '{{ label }}',
+            {% endfor %}
+        ],
+        datasets: [{
+            label: 'Баланс',
+            data: [
+                {% for value in balance_values %}
+                {{ value }},
+                {% endfor %}
+            ],
+            borderColor: '#2575fc',
+            backgroundColor: 'rgba(37, 117, 252, 0.15)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: {
+                display: true,
+                position: 'top'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return 'Баланс: ' + context.formattedValue + ' ₽';
+                    }
+                }
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: false,
+                ticks: {
+                    callback: function(value) {
+                        return value + ' ₽';
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+</script>
+{% endblock %}

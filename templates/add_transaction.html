@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Заголовок -->
+            <div class="page-header mb-4">
+                <h1 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Добавить транзакцию</h1>
+                <p class="mb-0">Запись новой финансовой операции</p>
+            </div>
+
+            <!-- Форма -->
+            <div class="card form-card">
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <!-- Тип транзакции -->
+                            <div class="col-md-6 mb-3">
+                                <label for="type" class="form-label">
+                                    <i class="fas fa-exchange-alt me-1"></i>Тип операции *
+                                </label>
+                                <select class="form-select" id="type" name="type" required>
+                                    <option value="income">📈 Доход</option>
+                                    <option value="expense" selected>📉 Расход</option>
+                                </select>
+                            </div>
+
+                            <!-- Сумма -->
+                            <div class="col-md-6 mb-3">
+                                <label for="amount" class="form-label">
+                                    <i class="fas fa-money-bill-wave me-1"></i>Сумма (₽) *
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">₽</span>
+                                    <input type="number" class="form-control" id="amount" name="amount"
+                                           step="0.01" min="0" required placeholder="1000.00">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Категория -->
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Категория *
+                            </label>
+                            <select class="form-select" id="category_id" name="category_id" required>
+                                <option value="">-- Выберите категорию --</option>
+                                {% for category in categories %}
+                                <option value="{{ category.id }}"
+                                        data-type="{{ category.type }}"
+                                        style="color: {{ category.color }};">
+                                    {{ category.icon }} {{ category.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <!-- Описание -->
+                        <div class="mb-3">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-file-alt me-1"></i>Описание
+                            </label>
+                            <textarea class="form-control" id="description" name="description"
+                                      rows="2" placeholder="Краткое описание операции"></textarea>
+                        </div>
+
+                        <!-- Дата -->
+                        <div class="mb-4">
+                            <label for="date" class="form-label">
+                                <i class="fas fa-calendar-alt me-1"></i>Дата *
+                            </label>
+                            <input type="date" class="form-control" id="date" name="date"
+                                   value="{{ get_moscow_time().strftime('%Y-%m-%d') }}" required>
+                        </div>
+
+                        <!-- Кнопки -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('index') }}" class="btn btn-modern">
+                                <i class="fas fa-arrow-left me-1"></i>Назад
+                            </a>
+                            <button type="submit" class="btn btn-modern-primary">
+                                <i class="fas fa-save me-1"></i>Сохранить транзакцию
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Быстрые подсказки -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Быстрые суммы</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-3">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="setAmount(100)">
+                                100 ₽
+                            </button>
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="setAmount(500)">
+                                500 ₽
+                            </button>
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="setAmount(1000)">
+                                1 000 ₽
+                            </button>
+                        </div>
+                        <div class="col-3">
+                            <button type="button" class="btn btn-outline-primary w-100" onclick="setAmount(5000)">
+                                5 000 ₽
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Фильтрация категорий по типу операции
+document.getElementById('type').addEventListener('change', function() {
+    const selectedType = this.value;
+    const categorySelect = document.getElementById('category_id');
+
+    // Показываем все категории сначала
+    for (let option of categorySelect.options) {
+        option.style.display = 'block';
+    }
+
+    // Скрываем категории, которые не соответствуют выбранному типу
+    if (selectedType) {
+        for (let option of categorySelect.options) {
+            if (option.value && option.dataset.type !== selectedType) {
+                option.style.display = 'none';
+            }
+        }
+    }
+
+    // Сбрасываем выбранную категорию
+    categorySelect.value = '';
+});
+
+// Изначально фильтруем категории
+document.getElementById('type').dispatchEvent(new Event('change'));
+
+// Функция для быстрой установки суммы
+function setAmount(amount) {
+    document.getElementById('amount').value = amount;
+    document.getElementById('amount').focus();
+}
+
+// Валидация формы
+document.querySelector('form').addEventListener('submit', function(e) {
+    const amount = document.getElementById('amount').value;
+    if (!amount || amount <= 0) {
+        e.preventDefault();
+        alert('Введите корректную сумму');
+        return false;
+    }
+
+    const category = document.getElementById('category_id').value;
+    if (!category) {
+        e.preventDefault();
+        alert('Выберите категорию');
+        return false;
+    }
+});
+</script>
+{% endblock %}

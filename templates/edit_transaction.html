@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать транзакцию - Домашний бюджет{% endblock %}
+
+{% block content %}
+<div class="container fade-in">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <!-- Заголовок -->
+            <div class="page-header mb-4">
+                <h1 class="mb-0"><i class="fas fa-edit me-2"></i>Редактировать транзакцию</h1>
+                <p class="mb-0">Изменение существующей финансовой операции</p>
+            </div>
+
+            <!-- Форма -->
+            <div class="card form-card">
+                <div class="card-body">
+                    <form method="POST">
+                        <input type="hidden" name="transaction_id" value="{{ transaction.id }}">
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="type" class="form-label">
+                                        <i class="fas fa-exchange-alt me-1"></i>Тип операции *
+                                    </label>
+                                    <select class="form-select" id="type" name="type" required>
+                                        <option value="income" {% if transaction.type == 'income' %}selected{% endif %}>📈 Доход</option>
+                                        <option value="expense" {% if transaction.type == 'expense' %}selected{% endif %}>📉 Расход</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="amount" class="form-label">
+                                        <i class="fas fa-money-bill-wave me-1"></i>Сумма *
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">₽</span>
+                                        <input type="number" class="form-control" id="amount" name="amount"
+                                               step="0.01" min="0.01" required value="{{ transaction.amount }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category_id" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Категория *
+                            </label>
+                            <select class="form-select" id="category_id" name="category_id" required>
+                                <option value="">Выберите категорию</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}"
+                                            data-type="{{ category.type }}"
+                                            {% if transaction.category_id == category.id %}selected{% endif %}>
+                                        {{ category.icon }} {{ category.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">
+                                <i class="fas fa-file-alt me-1"></i>Описание
+                            </label>
+                            <textarea class="form-control" id="description" name="description"
+                                      rows="3">{{ transaction.description or '' }}</textarea>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="date" class="form-label">
+                                <i class="fas fa-calendar-alt me-1"></i>Дата операции *
+                            </label>
+                            <input type="date" class="form-control" id="date" name="date"
+                                   required value="{{ transaction.date }}">
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('view_transactions') }}" class="btn btn-modern me-md-2">Отмена</a>
+                            <button type="submit" class="btn btn-modern-primary">
+                                <i class="fas fa-save me-1"></i>Сохранить изменения
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Информация о транзакции -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Информация о транзакции</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">ID транзакции:</small>
+                            <div class="fw-bold">#{{ transaction.id }}</div>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Дата создания:</small>
+                            <div class="fw-bold">{{ transaction.created_at[:10] }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const typeSelect = document.getElementById('type');
+    const categorySelect = document.getElementById('category_id');
+
+    function filterCategories() {
+        const selectedType = typeSelect.value;
+
+        Array.from(categorySelect.options).forEach(option => {
+            if (!option.value) return;
+            option.hidden = option.dataset.type !== selectedType;
+        });
+
+        if (categorySelect.selectedOptions.length &&
+            categorySelect.selectedOptions[0].hidden) {
+            categorySelect.value = "";
+        }
+    }
+
+    typeSelect.addEventListener('change', filterCategories);
+    filterCategories();
+});
+</script>
+{% endblock %}

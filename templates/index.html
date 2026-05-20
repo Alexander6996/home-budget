@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid fade-in">
+    <!-- Заголовок -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1><i class="fas fa-home me-2"></i>Главная страница</h1>
+                <p class="mb-0">Обзор вашего финансового состояния</p>
+            </div>
+            <div class="text-end">
+                <h3 class="mb-0">{{ "%.2f"|format(balance) }} ₽</h3>
+                <small>Текущий баланс</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Напоминания о лимитах -->
+    {% if reminders %}
+    <div class="card mb-4 border-warning" id="limit-reminders-card">
+        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Напоминания о лимитах</h5>
+            <span class="badge bg-white text-warning">{{ reminders|length }}</span>
+        </div>
+        <div class="card-body">
+            {% for reminder in reminders %}
+            <div class="alert alert-{{ reminder.type }} d-flex justify-content-between align-items-center mb-2" role="alert">
+                <div>
+                    <i class="fas fa-{% if reminder.type == 'warning' %}exclamation-triangle{% else %}exclamation-circle{% endif %} me-2"></i>
+                    <strong>{{ reminder.message }}</strong>
+                    <div class="mt-1">
+                        <small>
+                            Потрачено: <strong>{{ "%.2f"|format(reminder.spent) }} ₽</strong>
+                            | Лимит: <strong>{{ "%.2f"|format(reminder.limit) }} ₽</strong>
+                            {% if reminder.remaining is defined %}
+                            | Осталось: <strong class="text-success">{{ "%.2f"|format(reminder.remaining) }} ₽</strong>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                <a href="{{ url_for('view_limits') }}" class="btn btn-sm btn-outline-{{ reminder.type }}">
+                    <i class="fas fa-chart-pie me-1"></i>Управлять
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Быстрые действия -->
+    <div class="card mb-4 form-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Быстрые действия</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <a href="{{ url_for('add_transaction') }}" class="btn btn-modern btn-modern-success w-100">
+                        <i class="fas fa-plus-circle me-2"></i>Добавить операцию
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="quickAdd('income')" class="btn btn-modern btn-modern-primary w-100">
+                        <i class="fas fa-arrow-down me-2"></i>Быстрый доход (Q)
+                    </button>
+                </div>
+                <div class="col-md-4">
+                    <button onclick="quickAdd('expense')" class="btn btn-modern btn-modern-danger w-100">
+                        <i class="fas fa-arrow-up me-2"></i>Быстрый расход (W)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Финансовая сводка -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="stat-card stat-card-success">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-arrow-down me-2"></i>Доходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(income) }} ₽</h2>
+                    <p class="mb-0">За текущий месяц</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-card-danger">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-arrow-up me-2"></i>Расходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(expense) }} ₽</h2>
+                    <p class="mb-0">За текущий месяц</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card stat-card-primary">
+                <div class="card-body text-center">
+                    <h5><i class="fas fa-balance-scale me-2"></i>Баланс</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(balance) }} ₽</h2>
+                    <p class="mb-0">Текущее сальдо</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Общий бюджет на месяц -->
+    <div class="card mb-4 form-card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-wallet me-2"></i>Общий бюджет на месяц</h5>
+        </div>
+        <div class="card-body">
+            <form action="{{ url_for('main.set_monthly_budget') }}" method="post" class="row g-3 align-items-end mb-4">
+                <div class="col-md-4">
+                    <label for="budget_amount" class="form-label">
+                        <i class="fas fa-money-bill-wave me-1"></i>Сумма бюджета
+                    </label>
+                    <div class="input-group">
+                        <span class="input-group-text">₽</span>
+                        <input
+                            type="number"
+                            class="form-control"
+                            id="budget_amount"
+                            name="amount"
+                            step="0.01"
+                            min="1"
+                            value="{{ monthly_budget if monthly_budget else '' }}"
+                            placeholder="Введите бюджет на месяц"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-modern btn-modern-primary w-100">
+                        <i class="fas fa-save me-1"></i>
+                        {% if monthly_budget %}
+                            Обновить бюджет
+                        {% else %}
+                            Установить бюджет
+                        {% endif %}
+                    </button>
+                </div>
+            </form>
+
+            {% if monthly_budget > 0 %}
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 rounded text-center" style="background-color: #e3f2fd;">
+                        <h6 class="mb-1">Установленный бюджет</h6>
+                        <h4 class="mb-0 text-primary">{{ "%.2f"|format(monthly_budget) }} ₽</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 rounded text-center" style="background-color: #f8d7da;">
+                        <h6 class="mb-1">Уже потрачено</h6>
+                        <h4 class="mb-0 text-danger">{{ "%.2f"|format(budget_spent) }} ₽</h4>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="p-3 rounded text-center" style="background-color: {% if budget_remaining < 0 %}#f8d7da{% else %}#d4edda{% endif %};">
+                        <h6 class="mb-1">
+                            {% if budget_remaining < 0 %}
+                                Перерасход
+                            {% else %}
+                                Осталось
+                            {% endif %}
+                        </h6>
+                        <h4 class="mb-0 {% if budget_remaining < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ "%.2f"|format(budget_remaining|abs) }} ₽
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <div class="d-flex justify-content-between mb-1">
+                    <small class="text-muted">Использование бюджета</small>
+                    <small class="text-muted">{{ "%.1f"|format(budget_percent) }}%</small>
+                </div>
+
+                <div class="progress" style="height: 22px;">
+                    <div
+                        class="progress-bar {% if budget_percent >= 100 %}bg-danger{% elif budget_percent >= 80 %}bg-warning{% else %}bg-success{% endif %}"
+                        role="progressbar"
+                        style="width: {{ 100 if budget_percent > 100 else budget_percent }}%;"
+                        aria-valuenow="{{ budget_percent }}"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        {{ "%.1f"|format(budget_percent) }}%
+                    </div>
+                </div>
+            </div>
+
+            {% if budget_percent >= 100 %}
+            <div class="mt-3 p-3 rounded" style="background-color: #f8d7da; color: #721c24;">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                Вы превысили общий бюджет на месяц.
+            </div>
+            {% elif budget_percent >= 80 %}
+            <div class="mt-3 p-3 rounded" style="background-color: #fff3cd; color: #856404;">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Внимание: использовано более 80% общего бюджета.
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="p-3 rounded" style="background-color: #d1ecf1; color: #0c5460;">
+                <i class="fas fa-info-circle me-2"></i>
+                Общий бюджет на месяц пока не установлен.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Последние операции -->
+        <div class="col-md-8">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Последние операции</h5>
+                    <a href="{{ url_for('view_transactions') }}" class="btn btn-sm btn-modern-primary">
+                        <i class="fas fa-list me-1"></i>Все операции
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-modern">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Тип</th>
+                                    <th>Категория</th>
+                                    <th>Сумма</th>
+                                    <th>Описание</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for trans in transactions %}
+                                <tr>
+                                    <td>{{ trans.date }}</td>
+                                    <td>
+                                        {% if trans.type == 'income' %}
+                                        <span class="badge bg-success">Доход</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Расход</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if trans.category_icon %}
+                                        {{ trans.category_icon }} {{ trans.category_name }}
+                                        {% else %}
+                                        {{ trans.category_name }}
+                                        {% endif %}
+                                    </td>
+                                    <td class="{{ 'text-success' if trans.type == 'income' else 'text-danger' }} fw-bold">
+                                        {{ "%.2f"|format(trans.amount) }} ₽
+                                    </td>
+                                    <td>{{ trans.description or '-' }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5>Нет операций для отображения</h5>
+                        <p class="text-muted">Добавьте первую операцию, чтобы начать отслеживание бюджета</p>
+                        <a href="{{ url_for('add_transaction') }}" class="btn btn-modern-primary">
+                            <i class="fas fa-plus me-1"></i>Добавить первую операцию
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Правая колонка -->
+        <div class="col-md-4">
+            <!-- Расходы по категориям -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Расходы по категориям</h5>
+                </div>
+                <div class="card-body">
+                    {% if expense_categories %}
+                    {% for cat in expense_categories %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div class="d-flex align-items-center">
+                                <span class="badge me-2" style="background-color: {{ cat.color }};">&nbsp;&nbsp;&nbsp;</span>
+                                <span>{{ cat.name }}</span>
+                            </div>
+                            <span class="fw-bold">{{ "%.2f"|format(cat.total) }} ₽</span>
+                        </div>
+                        <div class="progress progress-modern">
+                            {% set percentage = (cat.total / expense * 100) if expense > 0 else 0 %}
+                            <div class="progress-bar" style="width: {{ percentage }}%; background-color: {{ cat.color }};"></div>
+                        </div>
+                        <small class="text-muted">{{ "%.1f"|format(percentage) }}% от общих расходов</small>
+                    </div>
+                    {% endfor %}
+                    <a href="{{ url_for('statistics') }}" class="btn btn-modern-primary w-100 mt-3">
+                        <i class="fas fa-chart-bar me-1"></i>Подробная статистика
+                    </a>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-chart-pie fa-2x text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Нет данных о расходах</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Цели накопления -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-bullseye me-2"></i>Активные цели</h5>
+                </div>
+                <div class="card-body">
+                    {% set active_goals = goals|selectattr('current_amount', 'lt', goals|map(attribute='target_amount')|list|first) %}
+                    {% set has_active_goals = false %}
+
+                    {% for goal in goals %}
+                        {% set current_amount = goal.current_amount|float %}
+                        {% set target_amount = goal.target_amount|float %}
+                        {% set percentage = (current_amount / target_amount * 100) if target_amount > 0 else 0 %}
+                        {% if percentage < 100 %}
+                            {% set has_active_goals = true %}
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if has_active_goals %}
+                        {% for goal in goals %}
+                            {% set current_amount = goal.current_amount|float %}
+                            {% set target_amount = goal.target_amount|float %}
+                            {% set percentage = (current_amount / target_amount * 100) if target_amount > 0 else 0 %}
+
+                            {% if percentage < 100 %}
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span>{{ goal.name }}</span>
+                                    <span class="fw-bold">{{ "%.0f"|format(percentage) }}%</span>
+                                </div>
+                                <div class="progress progress-modern">
+                                    <div
+                                        class="progress-bar {% if percentage >= 70 %}bg-warning{% elif percentage >= 30 %}bg-primary{% else %}bg-info{% endif %}"
+                                        role="progressbar"
+                                        style="width: {{ percentage }}%;"
+                                    ></div>
+                                </div>
+                                <small class="text-muted d-block">
+                                    {{ "%.2f"|format(current_amount) }} ₽ из {{ "%.2f"|format(target_amount) }} ₽
+                                    {% if goal.deadline %}
+                                    <br>До: {{ goal.deadline }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                        <a href="{{ url_for('view_goals') }}" class="btn btn-modern-success w-100 mt-2">
+                            <i class="fas fa-plus me-1"></i>Управлять целями
+                        </a>
+                    {% else %}
+                    <div class="text-center py-2">
+                        <p class="text-muted mb-2">Нет активных целей</p>
+                        <a href="{{ url_for('view_goals') }}" class="btn btn-modern-success">
+                            <i class="fas fa-plus me-1"></i>Добавить цель
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
