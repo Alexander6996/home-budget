@@ -252,7 +252,13 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+
 <script>
+if (typeof ChartDataLabels !== 'undefined') {
+    Chart.register(ChartDataLabels);
+}
+
 function toggleCustomDates() {
     const period = document.getElementById('period').value;
     const startDateBlock = document.getElementById('startDateBlock');
@@ -267,9 +273,61 @@ function toggleCustomDates() {
     }
 }
 
+function getPieChartOptions(titleText) {
+    return {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'bottom'
+            },
+            title: {
+                display: true,
+                text: titleText
+            },
+            datalabels: {
+                color: '#ffffff',
+                font: {
+                    weight: 'bold',
+                    size: 14
+                },
+                formatter: function(value, context) {
+                    const data = context.chart.data.datasets[0].data;
+                    const total = data.reduce(function(sum, current) {
+                        return sum + Number(current);
+                    }, 0);
+
+                    const percentage = total > 0 ? (Number(value) / total * 100) : 0;
+
+                    if (percentage < 3) {
+                        return '';
+                    }
+
+                    return percentage.toFixed(1) + '%';
+                }
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const data = context.chart.data.datasets[0].data;
+                        const total = data.reduce(function(sum, current) {
+                            return sum + Number(current);
+                        }, 0);
+
+                        const value = Number(context.raw);
+                        const percentage = total > 0 ? (value / total * 100) : 0;
+
+                        return context.label + ': ' + value.toFixed(2) + ' ₽ (' + percentage.toFixed(1) + '%)';
+                    }
+                }
+            }
+        }
+    };
+}
+
 {% if income_by_category %}
 // Диаграмма доходов
 const incomeCtx = document.getElementById('incomeChart').getContext('2d');
+
 new Chart(incomeCtx, {
     type: 'pie',
     data: {
@@ -292,24 +350,14 @@ new Chart(incomeCtx, {
             borderWidth: 1
         }]
     },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            },
-            title: {
-                display: true,
-                text: 'Доходы по категориям'
-            }
-        }
-    }
+    options: getPieChartOptions('Доходы по категориям')
 });
 {% endif %}
 
 {% if expense_by_category %}
 // Диаграмма расходов
 const expenseCtx = document.getElementById('expenseChart').getContext('2d');
+
 new Chart(expenseCtx, {
     type: 'pie',
     data: {
@@ -332,24 +380,14 @@ new Chart(expenseCtx, {
             borderWidth: 1
         }]
     },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: {
-                position: 'bottom'
-            },
-            title: {
-                display: true,
-                text: 'Расходы по категориям'
-            }
-        }
-    }
+    options: getPieChartOptions('Расходы по категориям')
 });
 {% endif %}
 
 {% if balance_labels and balance_values %}
 // График баланса
 const balanceCtx = document.getElementById('balanceChart').getContext('2d');
+
 new Chart(balanceCtx, {
     type: 'line',
     data: {
@@ -377,6 +415,9 @@ new Chart(balanceCtx, {
     options: {
         responsive: true,
         plugins: {
+            datalabels: {
+                display: false
+            },
             legend: {
                 display: true,
                 position: 'top'
