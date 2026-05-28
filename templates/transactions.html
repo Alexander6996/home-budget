@@ -12,8 +12,17 @@
             <div class="text-end">
                 {% set total_inc = transactions|selectattr('type', 'equalto', 'income')|map(attribute='amount')|sum %}
                 {% set total_exp = transactions|selectattr('type', 'equalto', 'expense')|map(attribute='amount')|sum %}
-                <h3 class="mb-0">{{ "%.2f"|format(total_inc - total_exp) }} ₽</h3>
-                <small>Баланс по фильтру</small>
+
+                {% if filter_type == 'income' %}
+                    <h3 class="mb-0">{{ "%.2f"|format(total_inc) }} ₽</h3>
+                    <small>Доходы по фильтру</small>
+                {% elif filter_type == 'expense' %}
+                    <h3 class="mb-0">{{ "%.2f"|format(total_exp) }} ₽</h3>
+                    <small>Расходы по фильтру</small>
+                {% else %}
+                    <h3 class="mb-0">{{ "%.2f"|format(total_inc - total_exp) }} ₽</h3>
+                    <small>Баланс по фильтру</small>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -21,8 +30,9 @@
     <!-- Карточки статистики -->
     {% set total_income = transactions|selectattr('type', 'equalto', 'income')|map(attribute='amount')|sum %}
     {% set total_expense = transactions|selectattr('type', 'equalto', 'expense')|map(attribute='amount')|sum %}
+
     <div class="row mb-4">
-        <div class="col-md-3">
+        <div class="{% if filter_type == 'all' %}col-md-3{% else %}col-md-6{% endif %}">
             <div class="stat-card stat-card-info">
                 <div class="card-body text-center">
                     <h5>Всего операций</h5>
@@ -31,6 +41,30 @@
                 </div>
             </div>
         </div>
+
+        {% if filter_type == 'income' %}
+        <div class="col-md-6">
+            <div class="stat-card stat-card-success">
+                <div class="card-body text-center">
+                    <h5>Доходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(total_income) }} ₽</h2>
+                    <p class="mb-0">Сумма доходов</p>
+                </div>
+            </div>
+        </div>
+
+        {% elif filter_type == 'expense' %}
+        <div class="col-md-6">
+            <div class="stat-card stat-card-danger">
+                <div class="card-body text-center">
+                    <h5>Расходы</h5>
+                    <h2 class="display-6">{{ "%.2f"|format(total_expense) }} ₽</h2>
+                    <p class="mb-0">Сумма расходов</p>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
         <div class="col-md-3">
             <div class="stat-card stat-card-success">
                 <div class="card-body text-center">
@@ -40,6 +74,7 @@
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
             <div class="stat-card stat-card-danger">
                 <div class="card-body text-center">
@@ -49,6 +84,7 @@
                 </div>
             </div>
         </div>
+
         <div class="col-md-3">
             <div class="stat-card stat-card-primary">
                 <div class="card-body text-center">
@@ -58,6 +94,7 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
 
     <!-- Основная карточка -->
@@ -198,9 +235,18 @@
                 <div class="col-md-4 text-end">
                     <div class="p-3 rounded" style="background-color: #d1ecf1; color: #0c5460;">
                         <strong>Итого по фильтру:</strong><br>
-                        Доходы: <span class="text-success fw-bold">{{ "%.2f"|format(total_income) }} ₽</span><br>
-                        Расходы: <span class="text-danger fw-bold">{{ "%.2f"|format(total_expense) }} ₽</span><br>
-                        Баланс: <span class="text-primary fw-bold">{{ "%.2f"|format(total_income - total_expense) }} ₽</span>
+
+                        {% if filter_type == 'income' %}
+                            Доходы: <span class="text-success fw-bold">{{ "%.2f"|format(total_income) }} ₽</span>
+
+                        {% elif filter_type == 'expense' %}
+                            Расходы: <span class="text-danger fw-bold">{{ "%.2f"|format(total_expense) }} ₽</span>
+
+                        {% else %}
+                            Доходы: <span class="text-success fw-bold">{{ "%.2f"|format(total_income) }} ₽</span><br>
+                            Расходы: <span class="text-danger fw-bold">{{ "%.2f"|format(total_expense) }} ₽</span><br>
+                            Баланс: <span class="text-primary fw-bold">{{ "%.2f"|format(total_income - total_expense) }} ₽</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
