@@ -111,6 +111,32 @@ def init_db():
         )
         ''')
 
+        # Создаем таблицу ежемесячных платежей
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS monthly_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            amount REAL NOT NULL,
+            category_id INTEGER NOT NULL,
+            payment_day INTEGER NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            user_id INTEGER NOT NULL,
+            FOREIGN KEY(category_id) REFERENCES categories(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+        ''')
+
+        conn.execute('''
+        CREATE TABLE IF NOT EXISTS monthly_payment_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            payment_id INTEGER NOT NULL,
+            month_year TEXT NOT NULL,
+            paid_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(payment_id, month_year),
+            FOREIGN KEY(payment_id) REFERENCES monthly_payments(id)
+        )
+        ''')
+
         # Создаем таблицу коммунальных услуг (user_id может быть NULL)
         conn.execute('''
         CREATE TABLE IF NOT EXISTS utility_rates (

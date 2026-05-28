@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-header">
+
+    <h1>
+
+        <i class="fas fa-calendar-alt me-2"></i>
+
+        Ежемесячные платежи
+
+    </h1>
+
+    <p class="mb-0">
+
+        Управление регулярными расходами
+
+    </p>
+
+</div>
+
+
+<div class="card form-card mb-4">
+
+<div class="card-header">
+
+<h5>
+
+Добавить платеж
+
+</h5>
+
+</div>
+
+<div class="card-body">
+
+<form method="POST"
+
+action="{{ url_for('monthly.add_monthly_payment') }}">
+
+<div class="row">
+
+<div class="col-md-3">
+
+<input
+class="form-control"
+name="name"
+placeholder="Название"
+required>
+
+</div>
+
+
+<div class="col-md-2">
+
+<input
+class="form-control"
+name="amount"
+type="number"
+step="0.01"
+placeholder="Сумма"
+required>
+
+</div>
+
+
+<div class="col-md-3">
+
+<select
+class="form-select"
+name="category_id"
+required>
+
+{% for c in categories %}
+
+<option value="{{ c.id }}">
+
+{{ c.name }}
+
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="col-md-2">
+
+<input
+class="form-control"
+name="payment_day"
+type="number"
+min="1"
+max="31"
+placeholder="День"
+required>
+
+</div>
+
+
+<div class="col-md-2">
+
+<button class="btn btn-modern-primary w-100">
+
+Добавить
+
+</button>
+
+</div>
+
+</div>
+
+</form>
+
+</div>
+
+</div>
+
+
+<div class="card">
+
+<div class="card-header">
+
+<h5>
+
+Список платежей
+
+</h5>
+
+</div>
+
+
+<div class="card-body">
+
+{% if payments %}
+
+<table class="table table-modern">
+
+<thead>
+
+<tr>
+
+<th>
+
+Название
+
+</th>
+
+<th>
+
+Сумма
+
+</th>
+
+<th>
+
+День
+
+</th>
+
+<th>
+
+Статус
+
+</th>
+
+<th>
+
+Действия
+
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+{% for p in payments %}
+
+<tr>
+
+<td>
+
+{{ p.name }}
+
+</td>
+
+
+<td>
+
+{{ "%.2f"|format(p.amount) }}
+
+₽
+
+</td>
+
+
+<td>
+
+{{ p.payment_day }}
+
+</td>
+
+
+<td>
+
+{% if p.paid %}
+
+<span class="badge bg-success">
+
+Оплачено
+
+</span>
+
+{% else %}
+
+<span class="badge bg-danger">
+
+Не оплачено
+
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td>
+
+{% if not p.paid %}
+
+<a
+class="btn btn-success btn-sm"
+
+href="{{ url_for(
+'monthly.pay_monthly',
+payment_id=p.id) }}">
+
+Оплатить
+
+</a>
+
+{% endif %}
+
+
+<a
+class="btn btn-danger btn-sm"
+
+href="{{ url_for(
+'monthly.delete_monthly',
+payment_id=p.id) }}">
+
+Удалить
+
+</a>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+{% else %}
+
+<div class="text-center">
+
+Нет ежемесячных платежей
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+{% endblock %}

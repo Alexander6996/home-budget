@@ -11,6 +11,7 @@ from routes.statistics_routes import register_statistics_routes
 from routes.limit_routes import register_limit_routes
 from routes.goal_routes import register_goal_routes
 from routes.utility_routes import register_utility_routes
+from routes.monthly_payment_routes import register_monthly_routes
 
 
 app = Flask(__name__)
@@ -82,6 +83,7 @@ register_statistics_routes(app)
 register_limit_routes(app)
 register_goal_routes(app)
 register_utility_routes(app)
+register_monthly_routes(app)
 
 add_legacy_route_aliases(app)
 
