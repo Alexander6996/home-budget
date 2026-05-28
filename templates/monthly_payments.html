@@ -180,7 +180,8 @@ required>
 
 <tbody>
 
-{% for p in payments %}
+{% for item in payments %}
+{% set p=item.payment %}
 
 <tr>
 
@@ -209,23 +210,11 @@ required>
 
 <td>
 
-{% if p.paid %}
+<span class="badge bg-{{ item.status_color }}">
 
-<span class="badge bg-success">
-
-Оплачено
+{{ item.status_text }}
 
 </span>
-
-{% else %}
-
-<span class="badge bg-danger">
-
-Не оплачено
-
-</span>
-
-{% endif %}
 
 </td>
 

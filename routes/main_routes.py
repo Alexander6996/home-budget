@@ -87,6 +87,38 @@ def index():
             LIMIT 1
         ''', (session['user_id'],)).fetchone()
 
+        nearest_payment = conn.execute(
+            """
+            SELECT *
+
+            FROM monthly_payments mp
+
+            WHERE mp.user_id=?
+
+            AND NOT EXISTS(
+
+                SELECT 1
+
+                FROM monthly_payment_logs mpl
+
+                WHERE mpl.payment_id=mp.id
+
+                AND mpl.month_year=?
+
+            )
+
+            ORDER BY payment_day
+
+            LIMIT 1
+            """,
+
+            (
+                session["user_id"],
+                current_month
+            )
+
+        ).fetchone()
+
         # Напоминания о лимитах
         reminders = []
         limits = conn.execute('''
@@ -166,7 +198,8 @@ def index():
         monthly_budget=monthly_budget,
         budget_spent=budget_spent,
         budget_remaining=budget_remaining,
-        budget_percent=budget_percent
+        budget_percent=budget_percent,
+        nearest_payment = nearest_payment
     )
 
 

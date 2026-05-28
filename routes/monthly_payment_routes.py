@@ -67,10 +67,49 @@ def view_monthly_payments():
             """
         ).fetchall()
 
+    today_day = datetime.now().day
+
+    payments_with_status = []
+
+    for p in payments:
+
+        days_left = p["payment_day"] - today_day
+
+        if p["paid"]:
+
+            status_text = "Оплачено"
+            status_color = "success"
+
+        else:
+
+            if days_left > 0:
+
+                status_text = f"Осталось {days_left} дн."
+                status_color = "warning"
+
+            elif days_left == 0:
+
+                status_text = "Сегодня"
+
+                status_color = "primary"
+
+            else:
+
+                status_text = f"Просрочено {-days_left} дн."
+
+                status_color = "danger"
+
+        payments_with_status.append(
+            {
+                "payment": p,
+                "status_text": status_text,
+                "status_color": status_color
+            }
+        )
 
     return render_template(
         "monthly_payments.html",
-        payments=payments,
+        payments=payments_with_status,
         categories=categories
     )
 
