@@ -158,13 +158,36 @@
                                 </div>
                             </form>
                         </div>
-                        <div class="col-4">
-                            <form action="{{ url_for('delete_goal', goal_id=goal.id) }}" method="post"
-                                  onsubmit="return confirm('Вы уверены, что хотите удалить цель «{{ goal.name }}»?')">
-                                <button type="submit" class="btn btn-modern-danger w-100">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </form>
+                        <div class="col-2">
+
+                        <a href="{{ url_for('edit_goal', goal_id=goal.id) }}"
+                           class="btn btn-modern-warning w-100">
+                            <i class="fas fa-edit"></i>
+                        </a>
+
+                        </div>
+
+
+                        <div class="col-2">
+
+                        <form action="{{ url_for('delete_goal', goal_id=goal.id) }}"
+                        method="post"
+
+                        onsubmit="return confirm(
+                        'Удалить цель {{ goal.name }}?'
+                        )">
+
+                        <button
+                        type="submit"
+
+                        class="btn btn-modern-danger w-100">
+
+                        <i class="fas fa-trash"></i>
+
+                        </button>
+
+                        </form>
+
                         </div>
                     </div>
                     {% else %}
@@ -193,6 +216,9 @@
                 </div>
             </div>
         </div>
+
+
+
         {% endfor %}
     </div>
     {% else %}
@@ -218,23 +244,5 @@ function scrollToForm() {
     document.getElementById('name').focus();
 }
 
-// Автоматический расчет рекомендуемой суммы
-document.addEventListener('DOMContentLoaded', function() {
-    const targetInput = document.getElementById('target_amount');
-    const autoSaveInput = document.getElementById('auto_save_amount');
-
-    if (targetInput) {
-        targetInput.addEventListener('input', function() {
-            const target = parseFloat(this.value) || 0;
-            if (target > 0) {
-                // Предлагаем 10% от цели как автосбережение
-                const suggestedAutoSave = Math.round(target * 0.1 / 100) * 100;
-                if (suggestedAutoSave >= 100) {
-                    autoSaveInput.placeholder = suggestedAutoSave + ' (рекомендуется)';
-                }
-            }
-        });
-    }
-});
 </script>
 {% endblock %}

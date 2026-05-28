@@ -146,6 +146,38 @@ def register_goal_routes(app):
 
         return redirect(url_for('view_goals'))
 
+    @app.route('/edit_goal/<int:goal_id>', methods=['GET', 'POST'])
+    @login_required
+    def edit_goal(goal_id):
+        """Редактирование цели"""
+        with get_db_connection() as conn:
+            goal = conn.execute(
+                'SELECT * FROM goals WHERE id = ? AND user_id = ?',
+                (goal_id, session['user_id'])
+            ).fetchone()
+
+            if not goal:
+                flash('Цель не найдена', 'error')
+                return redirect(url_for('view_goals'))
+
+            if request.method == 'POST':
+                name = request.form.get('name')
+                target_amount = float(request.form.get('target_amount', 0))
+                current_amount = float(request.form.get('current_amount', 0))
+                deadline = request.form.get('deadline')
+
+                conn.execute('''
+                    UPDATE goals
+                    SET name = ?, target_amount = ?, current_amount = ?, deadline = ?
+                    WHERE id = ? AND user_id = ?
+                ''', (name, target_amount, current_amount, deadline, goal_id, session['user_id']))
+
+                conn.commit()
+                flash('Цель успешно обновлена!', 'success')
+                return redirect(url_for('view_goals'))
+
+        return render_template('edit_goal.html', goal=goal)
+
     @app.route('/delete_goal/<int:goal_id>', methods=['POST'])
     @login_required
     def delete_goal(goal_id):
