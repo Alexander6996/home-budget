@@ -318,63 +318,119 @@
             </div>
 
             <!-- Цели накопления -->
+
             <div class="card">
+
                 <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-bullseye me-2"></i>Активные цели</h5>
+                    <h5 class="mb-0">
+                        <i class="fas fa-bullseye me-2"></i>
+                        Активные цели
+                    </h5>
                 </div>
+
                 <div class="card-body">
-                    {% set active_goals = goals|selectattr('current_amount', 'lt', goals|map(attribute='target_amount')|list|first) %}
-                    {% set has_active_goals = false %}
 
-                    {% for goal in goals %}
-                        {% set current_amount = goal.current_amount|float %}
-                        {% set target_amount = goal.target_amount|float %}
-                        {% set percentage = (current_amount / target_amount * 100) if target_amount > 0 else 0 %}
-                        {% if percentage < 100 %}
-                            {% set has_active_goals = true %}
-                        {% endif %}
-                    {% endfor %}
+                    {% if active_goal %}
 
-                    {% if has_active_goals %}
-                        {% for goal in goals %}
-                            {% set current_amount = goal.current_amount|float %}
-                            {% set target_amount = goal.target_amount|float %}
-                            {% set percentage = (current_amount / target_amount * 100) if target_amount > 0 else 0 %}
+                        {% set current_amount = active_goal.current_amount|float %}
+                        {% set target_amount = active_goal.target_amount|float %}
+                        {% set percentage =
+                        (current_amount / target_amount * 100)
+                        if target_amount > 0 else 0 %}
 
-                            {% if percentage < 100 %}
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between mb-1">
-                                    <span>{{ goal.name }}</span>
-                                    <span class="fw-bold">{{ "%.0f"|format(percentage) }}%</span>
-                                </div>
-                                <div class="progress progress-modern">
-                                    <div
-                                        class="progress-bar {% if percentage >= 70 %}bg-warning{% elif percentage >= 30 %}bg-primary{% else %}bg-info{% endif %}"
-                                        role="progressbar"
-                                        style="width: {{ percentage }}%;"
-                                    ></div>
-                                </div>
-                                <small class="text-muted d-block">
-                                    {{ "%.2f"|format(current_amount) }} ₽ из {{ "%.2f"|format(target_amount) }} ₽
-                                    {% if goal.deadline %}
-                                    <br>До: {{ goal.deadline }}
-                                    {% endif %}
-                                </small>
+                        <div class="mb-3">
+
+                            <div class="d-flex justify-content-between mb-1">
+
+                                <span>
+                                    {{ active_goal.name }}
+                                </span>
+
+                                <strong>
+                                    {{ "%.0f"|format(percentage) }}%
+                                </strong>
+
                             </div>
-                            {% endif %}
-                        {% endfor %}
-                        <a href="{{ url_for('view_goals') }}" class="btn btn-modern-success w-100 mt-2">
-                            <i class="fas fa-plus me-1"></i>Управлять целями
+
+
+                            <div class="progress progress-modern">
+
+                                <div
+                                    class="progress-bar
+                                    {% if percentage >= 70 %}
+                                        bg-warning
+                                    {% elif percentage >= 30 %}
+                                        bg-primary
+                                    {% else %}
+                                        bg-info
+                                    {% endif %}"
+
+                                    style="width: {{ percentage }}%;">
+
+                                </div>
+
+                            </div>
+
+
+                            <small class="text-muted d-block mt-2">
+
+                                {{ "%.2f"|format(current_amount) }}
+                                ₽ из
+                                {{ "%.2f"|format(target_amount) }}
+                                ₽
+
+                                {% if active_goal.deadline %}
+
+                                    <br>
+
+                                    Ближайший срок:
+
+                                    {{ active_goal.deadline }}
+
+                                {% endif %}
+
+                            </small>
+
+                        </div>
+
+
+                        <a
+                            href="{{ url_for('view_goals') }}"
+                            class="btn btn-modern-primary w-100">
+
+                            <i class="fas fa-list me-1"></i>
+
+                            Просмотреть активные цели
+
                         </a>
+
                     {% else %}
-                    <div class="text-center py-2">
-                        <p class="text-muted mb-2">Нет активных целей</p>
-                        <a href="{{ url_for('view_goals') }}" class="btn btn-modern-success">
-                            <i class="fas fa-plus me-1"></i>Добавить цель
-                        </a>
-                    </div>
+
+                        <div class="text-center py-2">
+
+                            <p class="text-muted mb-2">
+
+                                Нет активных целей
+
+                            </p>
+
+
+                            <a
+                                href="{{ url_for('view_goals') }}"
+                                class="btn btn-modern-success">
+
+                                <i class="fas fa-plus me-1"></i>
+
+                                Добавить цель
+
+                            </a>
+
+                        </div>
+
                     {% endif %}
+
                 </div>
+
             </div>
         </div>
     </div>

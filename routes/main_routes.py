@@ -72,13 +72,20 @@ def index():
             ORDER BY total DESC
         ''', (current_month, session['user_id'])).fetchall()
 
-        # Цели накопления
-        goals = conn.execute('''
+        # Активная цель накопления (берем ближайшую по дате)
+        active_goal = conn.execute('''
             SELECT *
             FROM goals
             WHERE user_id = ?
-            ORDER BY deadline
-        ''', (session['user_id'],)).fetchall()
+              AND CAST(current_amount AS REAL) < CAST(target_amount AS REAL)
+            ORDER BY
+                CASE
+                    WHEN deadline IS NULL OR deadline = '' THEN 1
+                    ELSE 0
+                END,
+                deadline ASC
+            LIMIT 1
+        ''', (session['user_id'],)).fetchone()
 
         # Напоминания о лимитах
         reminders = []
@@ -154,7 +161,7 @@ def index():
         balance=balance,
         transactions=transactions,
         expense_categories=expense_categories,
-        goals=goals,
+        active_goal=active_goal,
         reminders=reminders,
         monthly_budget=monthly_budget,
         budget_spent=budget_spent,
