@@ -188,6 +188,10 @@ def register_transaction_routes(app):
             query += ' AND t.date <= ?'
             params.append(end_date)
 
+        if filter_type != 'all':
+            query += ' AND t.type = ?'
+            params.append(filter_type)
+
         query += ' ORDER BY t.date DESC'
 
         with get_db_connection() as conn:
